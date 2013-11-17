@@ -1,0 +1,17 @@
+{
+	"Paths": [
+		"C:/ash/Dropbox/Work/sprint working/Unity/dll",
+		"C:/ash/Dropbox/Work/sprint working/3rd Party/dlls"
+	],
+
+	"SystemPaths": [
+		"C:/Windows/Microsoft.NET/Framework64/v4.0.30319"
+	],
+
+	"ExcludedDlls": [
+		"^CoherentUI_Native.dll$",
+ 		"^mscorlib\\.dll$",
+		"^System$",
+		"^System\\."
+	]
+}
