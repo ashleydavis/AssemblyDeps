@@ -153,14 +153,14 @@ namespace AssemblyDeps
                 {
                     var dllFileName = Path.GetFileName(dllPath);
                     DllInfo dllInfo = null;
-                    if (!dlls.TryGetValue(dllFileName, out dllInfo))
+                    if (!dlls.TryGetValue(dllFileName.ToLower(), out dllInfo))
                     {
                         dllInfo = new DllInfo()
                         {
                             name = dllFileName
                         };
 
-                        dlls[dllFileName] = dllInfo;
+                        dlls[dllFileName.ToLower()] = dllInfo;
                     }
 
                     dllInfo.locations.Add(dllPath);
@@ -235,7 +235,7 @@ namespace AssemblyDeps
                     rootDlls.Remove(refDllName);
 
                     DllInfo refDllInfo = null;
-                    if (allDlls.TryGetValue(refDllName, out refDllInfo))
+                    if (allDlls.TryGetValue(refDllName.ToLower(), out refDllInfo))
                     {
                         // Dll accounted for, move it to children.
                         dll.children[refDllName] = refDllInfo;
@@ -249,7 +249,7 @@ namespace AssemblyDeps
                             missing = true,
                         };
 
-                        dll.children[refDllName] = refDll;
+                        dll.children[refDllName.ToLower()] = refDll;
                     }
                 }
               
