@@ -78,7 +78,7 @@ namespace AssemblyDeps
                 var rootDlls = DetermineDeps(allDlls, config);
 
                 Console.WriteLine("=== Assembly Dependencies ===");
-                OutputDetails(rootDlls, new HashSet<string>());
+                OutputDetails(rootDlls, config, new HashSet<string>());
 
                 Console.WriteLine();
 
@@ -261,7 +261,7 @@ namespace AssemblyDeps
         /// <summary>
         /// Output the dlls of the hierarchy of dll dependencies.
         /// </summary>
-        private static void OutputDetails(IEnumerable<DllInfo> dlls, HashSet<string> dllsOutput, int indent = 0)
+        private static void OutputDetails(IEnumerable<DllInfo> dlls, Config config, HashSet<string> dllsOutput, int indent = 0)
         {
             foreach (var dll in dlls.OrderBy(d => d.name))
             {
@@ -270,7 +270,12 @@ namespace AssemblyDeps
 
                 if (dll.missing)
                 {
-                    Console.Write("- missing!");
+                    string location;
+                    if (!IsExcluded(dll.name, config) &&
+                        !FindDll(dll.name, out location, config))
+                    {
+                        Console.Write("- missing!");
+                    }
                 }
 
                 if (dll.loadFailed)
@@ -284,7 +289,7 @@ namespace AssemblyDeps
                 {
                     dllsOutput.Add(dll.name);
 
-                    OutputDetails(dll.children.Values, dllsOutput, indent + 1);
+                    OutputDetails(dll.children.Values, config, dllsOutput, indent + 1);
                 }
             }
         }
