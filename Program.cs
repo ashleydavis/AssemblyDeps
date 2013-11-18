@@ -187,14 +187,17 @@ namespace AssemblyDeps
         /// </summary>
         private static Assembly LoadDll(DllInfo dllInfo, string location)
         {
+            var fullLocation = Path.GetFullPath(location);
+
             Assembly a;
-            try
+            try            
             {
-                a = Assembly.LoadFile(location);
+                a = Assembly.LoadFile(fullLocation);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Failed to load dll: " + location);
+                Console.WriteLine("Full path: " + fullLocation);
                 Console.WriteLine("Exception Occurred: ");
                 Console.WriteLine(ex.ToString());
                 
