@@ -274,13 +274,13 @@ namespace AssemblyDeps
                     if (!IsExcluded(dll.name, config) &&
                         !FindDll(dll.name, out location, config))
                     {
-                        Console.Write("- missing!");
+                        Console.Write(" - missing!");
                     }
                 }
 
                 if (dll.loadFailed)
                 {
-                    Console.Write("- failed to load!");
+                    Console.Write(" - failed to load!");
                 }
 
                 Console.WriteLine();
