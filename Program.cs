@@ -312,7 +312,7 @@ namespace AssemblyDeps
                         string location;
                         if (FindDll(dll.name, out location, config))
                         {
-                            Console.WriteLine("    " + dll.name + " => " + location);
+                            Console.WriteLine(dll.name + " => " + location);
                             ++num;
                         }
                     }
