@@ -25,7 +25,7 @@ namespace AssemblyDeps
         /// <summary>
         /// List of regular expressions that define dlls to ignore.
         /// </summary>
-        public List<string> excludedDlls = new List<string>();
+        public List<string> ExcludedDlls = new List<string>();
     }
 
     /// <summary>
@@ -119,7 +119,11 @@ namespace AssemblyDeps
                 Console.WriteLine(numFailedToLoadDlls + " dlls failed to load.");
                 Console.WriteLine(numDuplicateDlls + " duplicate dlls.");
 
-                if (numDuplicateDlls > 0 || numMissingDlls > 0 || numFailedToLoadDlls > 0)
+                var failed = numDuplicateDlls > 0 || numMissingDlls > 0 || numFailedToLoadDlls > 0;
+                Console.WriteLine();
+                Console.WriteLine((failed ? "Failed" : "Passed") + " assembly dependency validation.");
+
+                if (failed)
                 {
                     return 1;
                 }
@@ -171,7 +175,7 @@ namespace AssemblyDeps
         /// </summary>
         private static bool IsExcluded(string dllName, Config config)
         {
-            foreach (var excluded in config.excludedDlls)
+            foreach (var excluded in config.ExcludedDlls)
             {
                 if ((new Regex(excluded)).IsMatch(dllName))
                 {
