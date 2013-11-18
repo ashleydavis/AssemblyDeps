@@ -412,6 +412,11 @@ namespace AssemblyDeps
                     Console.Write(": ");
                     Console.WriteLine(dll.locations.Count);
                     ++num;
+
+                    foreach (var location in dll.locations)
+                    {
+                        Console.WriteLine("   " + location);
+                    }
                 }
             }
 
