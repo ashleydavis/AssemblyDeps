@@ -221,15 +221,15 @@ namespace AssemblyDeps
 
             foreach (var dll in allDlls.Values)
             {
-                var a = LoadDll(dll, dll.locations[0]);
-                if (a == null)
+                var assembly = LoadDll(dll, dll.locations[0]);
+                if (assembly == null)
                 {
                     continue;
                 }
 
-                foreach (var assemblyName in a.GetReferencedAssemblies())
+                foreach (var assemblyName in assembly.GetReferencedAssemblies())
                 {
-                    var refDllName = assemblyName.Name + ".dll";
+                    var refDllName = assemblyName.Name + ".dll" + "_" + assemblyName.Version;
 
                     // This isn't a root dll, thats for sure.
                     rootDlls.Remove(refDllName);
