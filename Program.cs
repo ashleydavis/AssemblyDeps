@@ -33,11 +33,14 @@ namespace AssemblyDeps
     /// </summary>
     public class DllInfo
     {
+        public Assembly assembly = null;
         public string name = null;
+        public Version version;
         public List<string> locations = new List<string>();
         public Dictionary<string, DllInfo> children = new Dictionary<string, DllInfo>();
         public bool missing = false;
         public bool loadFailed = false;
+        public string key;
     }
 
     class Program
@@ -143,7 +146,7 @@ namespace AssemblyDeps
         /// </summary>
         private static Dictionary<string, DllInfo> LocateDlls(Config config)
         {
-            Dictionary<string, DllInfo> dlls = new Dictionary<string, DllInfo>();
+            var dlls = new Dictionary<string, DllInfo>();
 
             foreach (var path in config.Paths)
             {
@@ -151,19 +154,16 @@ namespace AssemblyDeps
 
                 foreach (var dllPath in dllPaths)
                 {
-                    var dllFileName = Path.GetFileName(dllPath);
-                    DllInfo dllInfo = null;
-                    if (!dlls.TryGetValue(dllFileName.ToLower(), out dllInfo))
+                    DllInfo dllInfo = LoadDll(dllPath);
+                    DllInfo existingDllInfo;
+                    if (!dlls.TryGetValue(dllInfo.key, out existingDllInfo))
                     {
-                        dllInfo = new DllInfo()
-                        {
-                            name = dllFileName
-                        };
-
-                        dlls[dllFileName.ToLower()] = dllInfo;
+                        dlls[dllInfo.key] = dllInfo;
                     }
-
-                    dllInfo.locations.Add(dllPath);
+                    else
+                    {
+                        existingDllInfo.locations.Add(dllInfo.locations[0]);
+                    }
                 }
             }
 
@@ -189,27 +189,33 @@ namespace AssemblyDeps
         /// <summary>
         /// Load a dll, if it can't be loaded record it.
         /// </summary>
-        private static Assembly LoadDll(DllInfo dllInfo, string location)
+        private static DllInfo LoadDll(string dllPath)
         {
-            var fullLocation = Path.GetFullPath(location);
+            var fullDllPath = Path.GetFullPath(dllPath);
 
-            Assembly a;
+            var dllInfo = new DllInfo
+            {
+                name = Path.GetFileName(dllPath)
+            };
+            dllInfo.locations.Add(fullDllPath);
+
             try            
             {
-                a = Assembly.LoadFile(fullLocation);
+                dllInfo.assembly = Assembly.LoadFile(fullDllPath);
+                dllInfo.version = dllInfo.assembly.GetName().Version;
+                dllInfo.key = (dllInfo.name + "_" + dllInfo.version).ToLower();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Failed to load dll: " + location);
-                Console.WriteLine("Full path: " + fullLocation);
+                Console.WriteLine("Failed to load dll: " + dllPath);
+                Console.WriteLine("Full path: " + fullDllPath);
                 Console.WriteLine("Exception Occurred: ");
                 Console.WriteLine(ex.ToString());
-                
+
                 dllInfo.loadFailed = true;
-                return null;
             }
 
-            return a;
+            return dllInfo;
         }
 
         /// <summary>
@@ -217,11 +223,11 @@ namespace AssemblyDeps
         /// </summary>
         private static IEnumerable<DllInfo> DetermineDeps(Dictionary<string, DllInfo> allDlls, Config config)
         {
-            Dictionary<string, DllInfo> rootDlls = new Dictionary<string, DllInfo>(allDlls);
+            var rootDlls = new Dictionary<string, DllInfo>(allDlls);
 
             foreach (var dll in allDlls.Values)
             {
-                var assembly = LoadDll(dll, dll.locations[0]);
+                var assembly = dll.assembly;
                 if (assembly == null)
                 {
                     continue;
@@ -229,27 +235,29 @@ namespace AssemblyDeps
 
                 foreach (var assemblyName in assembly.GetReferencedAssemblies())
                 {
-                    var refDllName = assemblyName.Name + ".dll" + "_" + assemblyName.Version;
+                    var dllKey = (assemblyName.Name + ".dll" + "_" + assemblyName.Version).ToLower();
 
                     // This isn't a root dll, thats for sure.
-                    rootDlls.Remove(refDllName);
+                    rootDlls.Remove(dllKey);
 
                     DllInfo refDllInfo = null;
-                    if (allDlls.TryGetValue(refDllName.ToLower(), out refDllInfo))
+                    if (allDlls.TryGetValue(dllKey, out refDllInfo))
                     {
                         // Dll accounted for, move it to children.
-                        dll.children[refDllName] = refDllInfo;
+                        dll.children[dllKey] = refDllInfo;
                     }
                     else
                     {
                         // Dll not found in specified paths.
                         var refDll = new DllInfo()
                         {
-                            name = refDllName,
+                            name = assemblyName.Name + ".dll",
+                            key = dllKey,
+                            version = assemblyName.Version,
                             missing = true,
                         };
 
-                        dll.children[refDllName.ToLower()] = refDll;
+                        dll.children[dllKey] = refDll;
                     }
                 }
               
@@ -266,13 +274,13 @@ namespace AssemblyDeps
             foreach (var dll in dlls.OrderBy(d => d.name))
             {
                 Console.Write(new string(' ', indent * 4));
-                Console.Write(dll.name);
+                Console.Write(dll.name + " (" + dll.version + ")");
 
                 if (dll.missing)
                 {
                     string location;
                     if (!IsExcluded(dll.name, config) &&
-                        !FindDll(dll.name, out location, config))
+                        !FindDll(dll, out location, config))
                     {
                         Console.Write(" - missing!");
                     }
@@ -310,9 +318,9 @@ namespace AssemblyDeps
                         dllsOutput.Add(dll.name);
 
                         string location;
-                        if (FindDll(dll.name, out location, config))
+                        if (FindDll(dll, out location, config))
                         {
-                            Console.WriteLine(dll.name + " => " + location);
+                            Console.WriteLine(dll.name + " (" + dll.version + ") => " + location);
                             ++num;
                         }
                     }
@@ -340,13 +348,13 @@ namespace AssemblyDeps
                         dllsOutput.Add(dll.name);
 
                         string location;
-                        if (FindDll(dll.name, out location, config))
+                        if (FindDll(dll, out location, config))
                         {
                             // Not really missing.
                         }
                         else if (!IsExcluded(dll.name, config))
                         {
-                            Console.WriteLine(dll.name);
+                            Console.WriteLine(dll.name + " (" + dll.version + ")");
                             ++num;
                         }
                     }
@@ -361,14 +369,20 @@ namespace AssemblyDeps
         /// <summary>
         /// Find a dll in the specified system paths.
         /// </summary>
-        private static bool FindDll(string dllName, out string location, Config config)
+        private static bool FindDll(DllInfo dllInfo, out string location, Config config)
         {
             foreach (var systemPath in config.SystemPaths)
             {
-                var dllPath = Path.Combine(systemPath, dllName);
-                if (File.Exists(dllPath))
+                var dllPath = Path.Combine(systemPath, dllInfo.name);
+                if (!File.Exists(dllPath))
                 {
-                    location = dllPath;
+                    continue;
+                }
+                var foundDllInfo = LoadDll(dllPath);
+                if (foundDllInfo.assembly != null &&
+                    foundDllInfo.version >= dllInfo.version)
+                {
+                    location = foundDllInfo.locations[0];
                     return true;
                 }
             }
@@ -389,7 +403,7 @@ namespace AssemblyDeps
                 if (dll.loadFailed && 
                     !IsExcluded(dll.name, config))
                 {
-                    Console.WriteLine(dll.name);
+                    Console.WriteLine(dll.name + " (" + dll.version + ")");
                     ++num;
                 }
             }
@@ -408,7 +422,7 @@ namespace AssemblyDeps
             {
                 if (dll.locations.Count > 1)
                 {
-                    Console.Write(dll.name);
+                    Console.Write(dll.name + " (" + dll.version + ")");
                     Console.Write(": ");
                     Console.WriteLine(dll.locations.Count);
                     ++num;
