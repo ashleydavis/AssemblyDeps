@@ -1,4 +1,3 @@
-AssemblyDeps
-============
+# Verify Assembly Deps
 
-A program to list dependencies of a .Net assembly.
+A program to verify dependencies of a .Net assembly against a known spec.
